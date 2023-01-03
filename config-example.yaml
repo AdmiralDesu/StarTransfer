@@ -1,0 +1,15 @@
+api_info:
+  host: localhost
+  port: 9999
+
+s3_info:
+  access_key: XXXX
+  secret_key: XXXX
+
+db_info:
+  db_name: postgres
+  db_host: 192.168.1.1
+  db_port: 5432
+  db_user: XXXX
+  db_password: XXXX
+
