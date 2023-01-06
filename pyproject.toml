@@ -2,7 +2,7 @@
 name = "startrasnfer"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["AdmiralDesu <skyrim.men024@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -12,6 +12,10 @@ aioboto3 = "^10.2.0"
 pyyaml = "^6.0"
 uvicorn = "^0.20.0"
 loguru = "^0.6.0"
+sqlmodel = "^0.0.8"
+asyncpg = "^0.27.0"
+aiofiles = "^22.1.0"
+python-multipart = "^0.0.5"
 
 
 [build-system]

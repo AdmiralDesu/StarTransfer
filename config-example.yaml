@@ -3,6 +3,7 @@ api_info:
   port: 9999
 
 s3_info:
+  host: "http://xxx.xxx.xxx.xxx:xxxx"
   access_key: XXXX
   secret_key: XXXX
 
