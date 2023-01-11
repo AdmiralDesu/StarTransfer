@@ -8,7 +8,8 @@ from pydantic import UUID4
 class BaseFiles(SQLModel):
     title: str = Field(nullable=False)
     md5: str = Field(nullable=False)
-    keys: UUID4 = Field(nullable=False, default=uuid4())
+    keys: UUID4 = Field(nullable=False, default_factory=uuid4)
+    content_type: str = Field(nullable=False)
     created_at = Field(default=datetime.datetime.today())
 
 
