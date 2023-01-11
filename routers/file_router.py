@@ -4,7 +4,7 @@ from datetime import datetime
 import aioboto3
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -84,14 +84,6 @@ async def get_file_info(
         )
 
 
-async def get_hash(filename):
-    md5_hash = hashlib.md5()
-    async with aiofiles.open(filename, "rb") as f:
-        while content := await f.read(CHUNK_SIZE):
-            md5_hash.update(content)
-    return md5_hash
-
-
 @file_router.post("/test_upload")
 async def upload_file_test(
         file: UploadFile = File(...),
@@ -103,12 +95,18 @@ async def upload_file_test(
     while content := await file.read(CHUNK_SIZE):
         md5_hash.update(content)
     md5_hash = md5_hash.hexdigest()
+
+    result = await session.execute(
+        select(Files)
+        .where(Files.md5 == md5_hash)
+    )
+
+    file_in_db: Files = result.scalars().first()
+
     file.file.seek(0)
 
-    upload_time = datetime.now() - start_time
-    start_hash = datetime.now()
-    hash_time = datetime.now() - start_hash
-    all_time = datetime.now() - start_time
+    if file_in_db:
+        raise HTTPException(status_code=400, detail="Такой файл уже существует!")
 
     async with s3_session.client(
         "s3",
@@ -126,10 +124,45 @@ async def upload_file_test(
     await session.commit()
     await session.refresh(new_file)
 
+    all_time = datetime.now() - start_time
+
     return {
-        "upload_time": f"{upload_time.seconds}.{upload_time.microseconds}",
-        "hash_time": f"{hash_time.seconds}.{hash_time.microseconds}",
         "all_time": f"{all_time.seconds}.{all_time.microseconds}",
         "hash": md5_hash,
         "file_id": new_file.id
     }
+
+
+@file_router.get("/download_file")
+async def download_file(
+        md5_hash: str,
+        session: AsyncSession = Depends(get_session)
+):
+    result = await session.execute(
+        select(Files)
+        .where(Files.md5 == md5_hash)
+    )
+
+    file_in_db: Files = result.scalars().first()
+
+    if not file_in_db:
+        raise HTTPException(status_code=404, detail=f"Файла с {md5_hash} не существует!")
+
+    async with s3_session.resource(
+            "s3",
+            endpoint_url=config.s3_info.host,
+            aws_access_key_id=config.s3_info.access_key,
+            aws_secret_access_key=config.s3_info.secret_key
+    ) as s3_resource:
+        obj = await s3_resource.Object(f"test1", f"{file_in_db.md5}")
+        result = await obj.get()
+        print(result)
+        async with aiofiles.open(f"./temp/{file_in_db.title}", "wb") as file:
+            while content := await result['Body'].read(CHUNK_SIZE):
+                await file.write(content)
+
+        return FileResponse(
+            f"./temp/{file_in_db.title}",
+            media_type=result['ResponseMetadata']['HTTPHeaders']['content-type'],
+            filename=file_in_db.title
+        )

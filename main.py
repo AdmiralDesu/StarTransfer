@@ -1,9 +1,6 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
-from database import get_session
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from models import Files
+
 from routers import file_router
 
 app = FastAPI(
