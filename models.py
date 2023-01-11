@@ -1,11 +1,14 @@
 import datetime
+from uuid import uuid4
 
 from sqlmodel import SQLModel, Field, UniqueConstraint, MetaData
+from pydantic import UUID4
 
 
 class BaseFiles(SQLModel):
-    title: str = Field()
-    md5: str = Field()
+    title: str = Field(nullable=False)
+    md5: str = Field(nullable=False)
+    keys: UUID4 = Field(nullable=False, default=uuid4())
     created_at = Field(default=datetime.datetime.today())
 
 
