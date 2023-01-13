@@ -26,7 +26,9 @@ async def upload_file(
     start_time = datetime.now()
 
     md5_hash = hashlib.md5()
+    file_size = 0
     while content := await file.read(CHUNK_SIZE):
+        file_size += len(content)
         md5_hash.update(content)
     md5_hash = md5_hash.hexdigest()
 
@@ -171,4 +173,19 @@ async def get_all_files(
     )
 
     return result.scalars().all()
+
+
+@file_router.get("/find_file_by_name")
+async def find_file_by_name(
+        filename: str,
+        session: AsyncSession = Depends(get_session)
+):
+    result = await session.execute(
+        select(Files)
+        .where(Files.title.ilike(f"%{filename}%"))
+    )
+
+    files_in_db: list[Files] = result.scalars().all()
+
+    return files_in_db
 

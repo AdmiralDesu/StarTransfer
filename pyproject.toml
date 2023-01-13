@@ -18,6 +18,8 @@ aiofiles = "^22.1.0"
 python-multipart = "^0.0.5"
 requests = "^2.28.1"
 aiohttp = "^3.8.3"
+apscheduler = "^3.9.1.post1"
+aiosqlite = "^0.18.0"
 
 
 [build-system]
