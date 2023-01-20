@@ -4,7 +4,11 @@
 from uvicorn import run
 from logger import status_logger
 from config import config
+import shutil
+from py7zr import unpack_7zarchive, pack_7zarchive
 
+shutil.register_unpack_format('7zip', ['.7z', ".7zip"], unpack_7zarchive)
+shutil.register_archive_format('7zip', pack_7zarchive, description='7zip archive')
 
 if __name__ == "__main__":
     status_logger.info("Стартую API")

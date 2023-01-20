@@ -11,6 +11,7 @@ class BaseFiles(SQLModel):
     keys: UUID4 = Field(nullable=False, default_factory=uuid4)
     content_type: str = Field(nullable=False)
     created_at = Field(default=datetime.datetime.today())
+    comment: str = Field(nullable=True, default="")
 
 
 class Files(BaseFiles, table=True):
