@@ -1,1 +1,1 @@
-from schemas.file_schemas import FileUpload
+from schemas.files import FileUpload

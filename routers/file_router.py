@@ -19,7 +19,7 @@ from config import config
 from database import get_session
 from logger import status_logger
 from models import Files
-from schemas.file_schemas import FileUpload
+from schemas.files import FileUpload
 
 file_router = APIRouter()
 CHUNK_SIZE = 100 * 1024 * 1024  # 100 MB
@@ -69,7 +69,8 @@ async def upload_file(
                 title=file.filename,
                 md5=md5_hash,
                 content_type=file.content_type,
-                comment=comment
+                comment=comment,
+                file_size=file_size
             )
             session.add(new_file)
             await session.commit()
@@ -279,21 +280,16 @@ async def download_all_files(
             #     while content := await result['Body'].read(CHUNK_SIZE):
             #         await file.write(content)
             tasks.append(download_and_write_file(path_to_dir, s3_resource, file_in_db))
-        #results = await asyncio.gather(*tasks, return_exceptions=True)
-        pbar = tqdm.tqdm(total=len(tasks), position=0, ncols=90)
-        for task in asyncio.as_completed(tasks):
-            value = await task
-            pbar.set_description(desc=f" {value}", refresh=True)
-            tqdm.tqdm.write(value)
-            pbar.update()
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         #print(results)
     print("Перехожу к созданию архива")
-    make_archive(os.path.join("./temp", "result"), '7zip', path_to_dir)
+    make_archive(os.path.join("./temp", "result"), 'zip', path_to_dir)
     print("Архив создан")
 
     return FileResponse(
-        path=os.path.join("./temp", "result.7z"),
-        filename="result.7zip"
+        path=os.path.join("./temp", "result.zip"),
+        filename="result.zip",
+        media_type="application/octet-stream"
     )
 
 

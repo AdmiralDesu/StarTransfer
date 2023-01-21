@@ -16,7 +16,8 @@ if __name__ == "__main__":
         run(
             app="main:app",
             host=config.api_info.host,
-            port=config.api_info.port
+            port=config.api_info.port,
+            workers=1
         )
     except Exception as run_error:
         status_logger.error("Во время запуска API произошла ошибка")

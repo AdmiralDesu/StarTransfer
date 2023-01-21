@@ -12,6 +12,7 @@ class BaseFiles(SQLModel):
     content_type: str = Field(nullable=False)
     created_at = Field(default=datetime.datetime.today())
     comment: str = Field(nullable=True, default="")
+    file_size: int = Field(nullable=False)
 
 
 class Files(BaseFiles, table=True):
