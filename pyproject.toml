@@ -22,6 +22,7 @@ apscheduler = "^3.9.1.post1"
 aiosqlite = "^0.18.0"
 py7zr = "^0.20.2"
 tqdm = "^4.64.1"
+alembic = "^1.9.2"
 
 
 [build-system]
