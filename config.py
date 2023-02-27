@@ -10,11 +10,11 @@ class DBInfo(BaseModel):
     """
     Класс с описанием подключения к БД
     """
-    database: str
-    host: str
-    port: int
-    user: str
-    password: str
+    db_name: str
+    db_host: str
+    db_port: int
+    db_user: str
+    db_password: str
 
 
 class S3Info(BaseModel):
@@ -24,6 +24,7 @@ class S3Info(BaseModel):
     host: str
     access_key: str
     secret_key: str
+    bucket: str
 
 
 class APIInfo(BaseModel):

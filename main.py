@@ -1,10 +1,11 @@
 import os.path
 import shutil
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.responses import RedirectResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+
 
 from routers import file_router
 
@@ -19,6 +20,13 @@ app.include_router(file_router)
 
 app.scheduler = AsyncIOScheduler()
 app.scheduler.start()
+
+
+@app.get("/ping", include_in_schema=False)
+async def ping():
+    return {
+        "ping": "pong"
+    }
 
 
 @app.get("/", include_in_schema=False)

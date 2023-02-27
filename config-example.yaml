@@ -6,6 +6,7 @@ s3_info:
   host: "http://xxx.xxx.xxx.xxx:xxxx"
   access_key: XXXX
   secret_key: XXXX
+  bucket: "xxxx"
 
 db_info:
   db_name: postgres
