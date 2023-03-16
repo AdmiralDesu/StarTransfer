@@ -1,3 +1,6 @@
+"""
+Router for work with articles
+"""
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
