@@ -1,19 +1,22 @@
+"""
+Module for file services
+"""
+# coding: utf8
 import hashlib
 from datetime import datetime
-from typing import Optional, Union, Tuple
+from typing import Union, Tuple, Optional
 from uuid import uuid4
 
 import aioboto3
-from fastapi import UploadFile, HTTPException
+from fastapi import UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from config import config
-from models import Files, FilesMD5
-from schemas import FileUpload
 from logger import file_logger
-from pydantic import UUID4
+from models.files import Files, FilesMD5
+from schemas.files import FileUpload
 
 s3_session = aioboto3.Session()
 
@@ -23,7 +26,12 @@ CHUNK_SIZE = 100 * 1024 * 1024  # 100 MB
 @file_logger.catch()
 async def get_md5_and_file_size(
         file: UploadFile
-):
+) -> Tuple[str, int, Optional[JSONResponse]]:
+    """
+    Function for md5 calculation
+    :param file: File object
+    :return:
+    """
     try:
         md5_hash = hashlib.md5()
         file_size = 0
@@ -32,12 +40,12 @@ async def get_md5_and_file_size(
             md5_hash.update(content)
         md5_hash = str(md5_hash.hexdigest())
         file.file.seek(0)
-        return md5_hash, file_size, ""
+        return md5_hash, file_size, None
     except Exception as error:
         return "", 0, JSONResponse(
             status_code=500,
             content={
-                "message": "Возникла ошибка при обработке файла",
+                "message": "Error while md5 calculation",
                 "error": f"{error=}"
             }
         )
@@ -47,7 +55,13 @@ async def get_md5_and_file_size(
 async def check_md5_in_db(
         md5_hash: str,
         session: AsyncSession
-) -> Tuple[bool, Union[JSONResponse, None]]:
+) -> Tuple[bool, Optional[JSONResponse]]:
+    """
+    Function for checking md5 sum in db
+    :param md5_hash: md5 of file
+    :param session: session to database
+    :return:
+    """
     try:
         result = await session.execute(
             select(FilesMD5)
@@ -55,16 +69,14 @@ async def check_md5_in_db(
         )
 
         file_in_db: Files = result.scalars().first()
-        print(file_in_db)
         if file_in_db:
-            print("md5 есть")
             return True, None
         return False, None
     except Exception as error:
         return False, JSONResponse(
             status_code=500,
             content={
-                "message": "Ошибка проверки файла в базе",
+                "message": "Error while checking for existing md5",
                 "error": f"{error=}"
             }
         )
@@ -74,7 +86,13 @@ async def check_md5_in_db(
 async def upload_file_to_s3(
         file: UploadFile,
         md5_hash: str
-):
+) -> Optional[JSONResponse]:
+    """
+    Function for uploading file to s3
+    :param file: File object
+    :param md5_hash: md5 hash of file
+    :return:
+    """
     try:
         async with s3_session.client(
                 "s3",
@@ -82,14 +100,17 @@ async def upload_file_to_s3(
                 aws_access_key_id=config.s3_info.access_key,
                 aws_secret_access_key=config.s3_info.secret_key
         ) as s3_client:
-
-            await s3_client.upload_fileobj(file.file, config.s3_info.bucket, md5_hash)
+            await s3_client.upload_fileobj(
+                file.file,
+                config.s3_info.bucket,
+                f"files.md5/{md5_hash}"
+            )
         return None
     except Exception as error:
         return JSONResponse(
             status_code=500,
             content={
-                "message": "Не удалась загрузка на s3",
+                "message": "Error while uploading to s3",
                 "error": f"{error=}"
             }
         )
@@ -98,10 +119,18 @@ async def upload_file_to_s3(
 @file_logger.catch()
 async def create_new_files_md5(
         md5_hash: str,
-        file_size: str,
+        file_size: int,
         mime_type: str,
         session: AsyncSession
-):
+) -> Optional[JSONResponse]:
+    """
+    Function for creating new md5 row in db
+    :param md5_hash: md5 hash of file.
+    :param file_size: file size
+    :param mime_type: type of file
+    :param session: session to db
+    :return:
+    """
     try:
         exist, error = await check_md5_in_db(
             md5_hash=md5_hash,
@@ -115,6 +144,7 @@ async def create_new_files_md5(
             id=md5_hash,
             mime_type=mime_type,
             file_size=file_size,
+            inserted=datetime.today(),
             inserted_by="StarWorker"
         )
         session.add(files_md5)
@@ -124,7 +154,7 @@ async def create_new_files_md5(
         return JSONResponse(
             status_code=500,
             content={
-                "message": "Во время сохранения md5 произошла ошибка",
+                "message": "Error while creating new md5 row in db",
                 "error": f"{error=}"
             }
         )
@@ -136,13 +166,22 @@ async def create_new_file(
         folder_id: int,
         md5_hash: str,
         session: AsyncSession
-):
+) -> Tuple[Optional[Files], Optional[JSONResponse]]:
+    """
+    Function for creating new file row in db
+    :param filename: name of file
+    :param folder_id: id of folder for file
+    :param md5_hash: md5 hash of file
+    :param session: session to db
+    :return:
+    """
     try:
         new_file = Files(
             filename=filename,
             folder_id=folder_id,
             keys=uuid4(),
             inserted_by="StarWorker",
+            inserted=datetime.today(),
             md5=md5_hash
         )
         session.add(new_file)
@@ -153,70 +192,8 @@ async def create_new_file(
         return None, JSONResponse(
             status_code=500,
             content={
-                "message": "Во время сохранения файла в базе произошла ошибка",
+                "message": "Error while creating new file row in db",
                 "error": f"{error=}"
             }
         )
 
-
-@file_logger.catch()
-async def upload_file_service(
-        session: AsyncSession,
-        file: UploadFile,
-        folder_id: int
-):
-    try:
-        start_time = datetime.now()
-        md5_hash, file_size, error = await get_md5_and_file_size(
-            file=file
-        )
-        if error:
-            return error
-
-        error = await upload_file_to_s3(
-            file=file,
-            md5_hash=md5_hash
-        )
-        if error:
-            return error
-
-        error = await create_new_files_md5(
-            md5_hash=md5_hash,
-            file_size=file_size,
-            mime_type=file.content_type,
-            session=session
-        )
-        if error:
-            return error
-
-        new_file, error = await create_new_file(
-            filename=file.filename,
-            folder_id=folder_id,
-            md5_hash=md5_hash,
-            session=session
-        )
-        if error:
-            return error
-
-        uploaded_file = FileUpload(
-            keys=str(new_file.keys),
-            md5=new_file.md5,
-            id=new_file.id,
-            detail=f"Файл {new_file.filename} успешно загружен"
-        )
-        all_time = datetime.now() - start_time
-        return JSONResponse(
-            status_code=200,
-            content={
-                "all_time": f"{all_time.seconds}.{all_time.microseconds}",
-                "info": uploaded_file.dict()
-            }
-        )
-    except Exception as error:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "message": "Во время работы по сохранению файла произошла ошибка",
-                "error": f"{error=}"
-            }
-        )
