@@ -1,2 +1,2 @@
-# StarTrasnfer
-S3 Client
+# StarTransfer
+S3 Client and more!
