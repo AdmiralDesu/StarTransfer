@@ -50,12 +50,14 @@ async def health(
 )
 async def upload_file_to_folder(
         folder_id: int,
+        unique: bool = False,
         file: UploadFile = File(...),
         session: AsyncSession = Depends(get_session)
 ):
     """
     - File upload endpoint
     - **folder_id**: ID of folder for file
+    - **unique**: Need in unique files
     - **file**: File to upload
     - **session**: Database session (auto)
     - **return**: Error or file info
@@ -65,7 +67,8 @@ async def upload_file_to_folder(
     return await upload_file_controller(
         file=file,
         folder_id=folder_id,
-        session=session
+        session=session,
+        unique=unique
     )
 
 
@@ -283,6 +286,3 @@ async def download_all_files(
             )
         await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
     return True
-
-
-

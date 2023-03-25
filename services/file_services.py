@@ -4,7 +4,7 @@ Module for file services
 # coding: utf8
 import hashlib
 from datetime import datetime
-from typing import Union, Tuple, Optional
+from typing import Tuple, Optional
 from uuid import uuid4
 
 import aioboto3
@@ -16,7 +16,6 @@ from sqlalchemy.future import select
 from config import config
 from logger import file_logger
 from models.files import Files, FilesMD5
-from schemas.files import FileUpload
 
 s3_session = aioboto3.Session()
 
@@ -121,7 +120,7 @@ async def create_new_files_md5(
         md5_hash: str,
         file_size: int,
         mime_type: str,
-        session: AsyncSession
+        session: AsyncSession,
 ) -> Optional[JSONResponse]:
     """
     Function for creating new md5 row in db
@@ -132,14 +131,6 @@ async def create_new_files_md5(
     :return:
     """
     try:
-        exist, error = await check_md5_in_db(
-            md5_hash=md5_hash,
-            session=session
-        )
-        if error:
-            return error
-        if exist:
-            return None
         files_md5 = FilesMD5(
             id=md5_hash,
             mime_type=mime_type,
@@ -196,4 +187,3 @@ async def create_new_file(
                 "error": f"{error=}"
             }
         )
-

@@ -18,6 +18,21 @@ article_router = APIRouter(
 )
 
 
+@article_router.get("/get_all_articles")
+async def get_all_articles(
+        session: AsyncSession = Depends(get_session)
+):
+    """
+    Get all articles in db
+    - **session**: Session to db (auto)
+    :return: Articles Model
+    """
+    results = await session.execute(
+        select(Article)
+    )
+    return results.scalars().all()
+
+
 @article_router.delete(
     "/folder_delete"
 )
@@ -153,4 +168,3 @@ async def create_new_folder(
                 "error": f"{error=}"
             }
         )
-

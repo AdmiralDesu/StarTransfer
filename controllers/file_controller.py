@@ -13,7 +13,8 @@ from services.file_services import (
     get_md5_and_file_size,
     upload_file_to_s3,
     create_new_files_md5,
-    create_new_file
+    create_new_file,
+    check_md5_in_db
 )
 
 
@@ -21,13 +22,15 @@ from services.file_services import (
 async def upload_file_controller(
         session: AsyncSession,
         file: UploadFile,
-        folder_id: int
+        folder_id: int,
+        unique: bool = False
 ) -> JSONResponse:
     """
     - Controller for file upload
     - **session**: Database session (auto)
     - **file**: File to upload
     - **folder_id**: ID of folder for file
+    - **unique**: Need in unique files
     - **return**: Error of file info in JSONResponse
     """
     try:
@@ -38,21 +41,36 @@ async def upload_file_controller(
         if error:
             return error
 
-        error = await upload_file_to_s3(
-            file=file,
-            md5_hash=md5_hash
-        )
-        if error:
-            return error
-
-        error = await create_new_files_md5(
+        exist, error = await check_md5_in_db(
             md5_hash=md5_hash,
-            file_size=file_size,
-            mime_type=file.content_type,
             session=session
         )
         if error:
             return error
+        if exist:
+            if unique:
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "message": "File is already exists"
+                    }
+                )
+        else:
+            error = await upload_file_to_s3(
+                file=file,
+                md5_hash=md5_hash
+            )
+            if error:
+                return error
+
+            error = await create_new_files_md5(
+                md5_hash=md5_hash,
+                file_size=file_size,
+                mime_type=file.content_type,
+                session=session
+            )
+            if error:
+                return error
 
         new_file, error = await create_new_file(
             filename=file.filename,
